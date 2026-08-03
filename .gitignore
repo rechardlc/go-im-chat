@@ -67,6 +67,7 @@ ehthumbs.db
 .history/
 
 # Docker local volumes / data
+data/
 docker-data/
 .data/
 

@@ -1,0 +1,50 @@
+# 定义一个后端网络和前端网络
+networks:
+  backend-net:
+    driver: bridge
+  frontend-net: 
+    driver: bridge
+
+services:
+  postgres-db:
+    container_name: postgres-db
+    image: postgres:13
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    volumes:
+      # 本地数据落在项目 ./data 目录
+      - ./data/postgres:/var/lib/postgresql/data
+    environment:
+    # 使用环境变量来设置 postgres 的用户名、密码和数据库名，如果环境变量没有设置，则使用默认值
+      - POSTGRES_USER=${POSTGRES_USER:-chat}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-123456}
+      - POSTGRES_DB=${POSTGRES_DB:-chat}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chat} -d ${POSTGRES_DB:-chat}"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    # 使用 networks 来连接后端网络
+    networks:
+      - backend-net
+
+  redis-cache:
+    container_name: redis-cache
+    image: redis:alpine3.23
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data
+    # 开启 AOF 持久化，并用环境变量设置访问密码
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-123456}"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-123456} ping | grep PONG"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend-net

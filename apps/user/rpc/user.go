@@ -16,15 +16,22 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+// flag包的作用：定义参数 -> 解析参数 -> 使用参数
+// -f 参数名，etc/user.yaml 参数值，the config file 参数描述
 var configFile = flag.String("f", "etc/user.yaml", "the config file")
 
 func main() {
+	// 解析参数
 	flag.Parse()
 
+	// 加载配置
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
+
+	// 创建服务上下文
 	ctx := svc.NewServiceContext(c)
 
+	// 创建RPC服务器
 	s := zrpc.MustNewServer(c.RpcServerConf, func(grpcServer *grpc.Server) {
 		user.RegisterUserServer(grpcServer, server.NewUserServer(ctx))
 
