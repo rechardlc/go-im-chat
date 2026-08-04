@@ -1,48 +1,68 @@
 package ctxdata
 
 import (
-	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// 1. 定义自定义声明结构体（Custom Claims）
-// jwt.RegisteredClaims 包含了标准字段：Issuer, Subject, Audience, ExpiresAt, NotBefore, IssuedAt, ID
+const tokenIssuer = "min-chat"
+
+// CustomClaims JWT 自定义声明。
 type CustomClaims struct {
-	UserID   int64  `json:"user_id"`
-	Phone    string `json:"phone"`
+	UserID string `json:"user_id"`
+	Phone  string `json:"phone"`
 	jwt.RegisteredClaims
 }
 
-// 2. 密钥（Secret Key），生产环境中建议从环境变量或配置文件（如 config.yaml）读取
-var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+// TokenManager 负责 JWT 签发与校验。
+type TokenManager struct {
+	secret             []byte
+	accessTokenExpire  time.Duration
+	refreshTokenExpire time.Duration
+}
 
-// CustomClaims 过期时间设置（例如 2 小时）
-var AccessTokenExpireDuration, _ = time.ParseDuration(os.Getenv("JWT_ACCESS_TOKEN_EXPIRE"))
-var RefreshTokenExpireDuration, _ = time.ParseDuration(os.Getenv("JWT_REFRESH_TOKEN_EXPIRE"))
+// NewTokenManager 根据配置创建 TokenManager。
+func NewTokenManager(cfg JWTConfig) (*TokenManager, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
 
-// GenerateToken 生成 JWT Token
-func GenerateToken(userID int64, phone string) (string, error) {
-	// 创建自己的 Claims
+	return &TokenManager{
+		secret:             []byte(cfg.Secret),
+		accessTokenExpire:  cfg.AccessTokenExpire,
+		refreshTokenExpire: cfg.RefreshTokenExpire,
+	}, nil
+}
+
+// MustNewTokenManager 创建 TokenManager，配置非法时 panic。
+func MustNewTokenManager(cfg JWTConfig) *TokenManager {
+	m, err := NewTokenManager(cfg)
+	if err != nil {
+		panic(err)
+	}
+	return m
+}
+
+// AccessTokenExpire 返回 access token 有效期。
+func (m *TokenManager) AccessTokenExpire() time.Duration {
+	return m.accessTokenExpire
+}
+
+// GenerateToken 生成 JWT access token。
+func (m *TokenManager) GenerateToken(userID, phone string) (string, error) {
+	now := time.Now()
 	claims := CustomClaims{
-		UserID:   userID,
-		Phone:    phone,
+		UserID: userID,
+		Phone:  phone,
 		RegisteredClaims: jwt.RegisteredClaims{
-			// 设置过期时间
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(AccessTokenExpireDuration)),
-			// 签发时间
-			IssuedAt: jwt.NewNumericDate(time.Now()),
-			// 生效时间
-			NotBefore: jwt.NewNumericDate(time.Now()),
-			// 签发人
-			Issuer: "min-chat",
+			ExpiresAt: jwt.NewNumericDate(now.Add(m.accessTokenExpire)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			Issuer:    tokenIssuer,
 		},
 	}
 
-	// 使用指定的签名方法（如 HMAC-SHA256）和 Claim 创建 token 对象
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	// 使用密钥进行签名并获得完整的编码后的字符串 Token
-	return token.SignedString(jwtSecret)
+	return token.SignedString(m.secret)
 }

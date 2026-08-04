@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"strconv"
 
 	callbackwuid "github.com/edwingeng/wuid/callback/wuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -89,24 +90,24 @@ func loadH28FromPostgres() (int64, func(), error) {
 /**
  * Next 生成下一个全局唯一 int64 ID。
  */
-func Next() int64 {
+func Next() string {
 	if Wuid == nil {
 		panic("wuid: Next() called before Init() or after Close()")
 	}
-	return Wuid.Next()
+	return strconv.FormatInt(Wuid.Next(), 10)
 }
 
 /**
  * SafeNext 生成下一个 ID；未初始化时返回 ErrNotInitialized，不 panic。
  */
-func SafeNext() (int64, error) {
+func SafeNext() (string, error) {
 	mu.RLock()
 	defer mu.RUnlock()
 
 	if Wuid == nil {
-		return 0, ErrNotInitialized
+		return "", ErrNotInitialized
 	}
-	return Wuid.Next(), nil
+	return Next(), nil
 }
 
 /**
