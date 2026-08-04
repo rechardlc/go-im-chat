@@ -1,6 +1,7 @@
 package ctxdata
 
 import (
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -15,10 +16,11 @@ type CustomClaims struct {
 }
 
 // 2. 密钥（Secret Key），生产环境中建议从环境变量或配置文件（如 config.yaml）读取
-var jwtSecret = []byte("your-256-bit-secret-key-change-it-in-prod")
+var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
 // CustomClaims 过期时间设置（例如 2 小时）
-const TokenExpireDuration = 2 * time.Hour
+var AccessTokenExpireDuration, _ = time.ParseDuration(os.Getenv("JWT_ACCESS_TOKEN_EXPIRE"))
+var RefreshTokenExpireDuration, _ = time.ParseDuration(os.Getenv("JWT_REFRESH_TOKEN_EXPIRE"))
 
 // GenerateToken 生成 JWT Token
 func GenerateToken(userID int64, phone string) (string, error) {
@@ -28,7 +30,7 @@ func GenerateToken(userID int64, phone string) (string, error) {
 		Phone:    phone,
 		RegisteredClaims: jwt.RegisteredClaims{
 			// 设置过期时间
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TokenExpireDuration)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(AccessTokenExpireDuration)),
 			// 签发时间
 			IssuedAt: jwt.NewNumericDate(time.Now()),
 			// 生效时间

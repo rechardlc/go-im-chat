@@ -26,7 +26,7 @@ func main() {
 
 	// 加载配置
 	var c config.Config
-	conf.MustLoad(*configFile, &c)
+	conf.MustLoad(*configFile, &c, conf.UseEnv())
 
 	// 创建服务上下文
 	ctx := svc.NewServiceContext(c)
