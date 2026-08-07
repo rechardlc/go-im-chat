@@ -18,6 +18,7 @@ import (
 
 var (
 	ErrUserAlreadyExists = errors.New("user already exists")
+	ErrUserNotFound      = errors.New("user not found")
 )
 
 type RegisterLogic struct {
@@ -46,6 +47,7 @@ func (l *RegisterLogic) Register(in *user.RegisterReq) (*user.RegisterResp, erro
 	// 2. 检查手机号是否已经注册
 	userInfo, err := l.svcCtx.UsersModel.FindOneByPhone(l.ctx, phone)
 	if err != nil && !errors.Is(err, models.ErrNotFound) {
+		l.Errorf("find user by phone failed: %v", err)
 		return nil, err
 	}
 	if userInfo != nil {

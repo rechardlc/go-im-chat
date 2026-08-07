@@ -8,6 +8,7 @@ import (
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/internal/server"
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/internal/svc"
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/user/github.com/rechardlc/go-im-chat/apps/user/rpc/user"
+	"github.com/rechardlc/go-im-chat/pkg/wuid"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/service"
@@ -17,8 +18,8 @@ import (
 )
 
 // flag包的作用：定义参数 -> 解析参数 -> 使用参数
-// -f 参数名，etc/user.yaml 参数值，the config file 参数描述
-var configFile = flag.String("f", "etc/user.yaml", "the config file")
+// -f 参数名，etc/dev/user.yaml 参数值，the config file 参数描述
+var configFile = flag.String("f", "etc/dev/user.yaml", "the config file")
 
 func main() {
 	// 解析参数
@@ -27,6 +28,11 @@ func main() {
 	// 加载配置
 	var c config.Config
 	conf.MustLoad(*configFile, &c, conf.UseEnv())
+
+	if err := wuid.Init(c.Postgres.DataSource); err != nil {
+		panic(err)
+	}
+	defer wuid.Close()
 
 	// 创建服务上下文
 	ctx := svc.NewServiceContext(c)

@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"sync"
 	"strconv"
+	"sync"
 
 	callbackwuid "github.com/edwingeng/wuid/callback/wuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -57,7 +57,10 @@ func Init(dsn string) error {
 	db = conn
 	Wuid = callbackwuid.NewWUID(wuidName, nil)
 
-	if err = Wuid.LoadH28WithCallback(loadH28FromPostgres); err != nil {
+	// Init 已持有 mu.Lock，回调不能再抢 RLock，否则会死锁。
+	if err = Wuid.LoadH28WithCallback(func() (int64, func(), error) {
+		return nextH28FromConn(conn)
+	}); err != nil {
 		_ = db.Close()
 		db = nil
 		Wuid = nil
@@ -66,6 +69,7 @@ func Init(dsn string) error {
 
 	return nil
 }
+
 /**
  * loadH28FromPostgres 从 PostgreSQL 加载 H28 序列。
  */
@@ -78,6 +82,10 @@ func loadH28FromPostgres() (int64, func(), error) {
 		return 0, nil, errors.New("postgres connection is not initialized")
 	}
 
+	return nextH28FromConn(conn)
+}
+
+func nextH28FromConn(conn *sql.DB) (int64, func(), error) {
 	var h28 int64
 	query := "SELECT nextval($1)"
 	if err := conn.QueryRow(query, h28Sequence).Scan(&h28); err != nil {
@@ -88,13 +96,17 @@ func loadH28FromPostgres() (int64, func(), error) {
 }
 
 /**
- * Next 生成下一个全局唯一 int64 ID。
+ * Next 生成下一个全局唯一 ID（string 形式）。
  */
 func Next() string {
-	if Wuid == nil {
+	mu.RLock()
+	w := Wuid
+	mu.RUnlock()
+
+	if w == nil {
 		panic("wuid: Next() called before Init() or after Close()")
 	}
-	return strconv.FormatInt(Wuid.Next(), 10)
+	return strconv.FormatInt(w.Next(), 10)
 }
 
 /**
@@ -102,12 +114,13 @@ func Next() string {
  */
 func SafeNext() (string, error) {
 	mu.RLock()
-	defer mu.RUnlock()
+	w := Wuid
+	mu.RUnlock()
 
-	if Wuid == nil {
+	if w == nil {
 		return "", ErrNotInitialized
 	}
-	return Next(), nil
+	return strconv.FormatInt(w.Next(), 10), nil
 }
 
 /**

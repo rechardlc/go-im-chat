@@ -1,0 +1,17 @@
+Name: user.rpc
+ListenOn: 0.0.0.0:8080
+Mode: dev
+Timeout: 0
+
+Postgres:
+  DataSource: postgres://chat:123456@127.0.0.1:5432/chat?sslmode=disable
+
+CacheRedis:
+  - Host: 127.0.0.1:6379
+    Pass: "123456"
+    Type: node
+
+JWT:
+  Secret: dev-secret-change-me
+  AccessTokenExpire: 1h
+  RefreshTokenExpire: 168h

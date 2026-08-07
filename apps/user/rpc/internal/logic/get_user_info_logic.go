@@ -2,11 +2,17 @@ package logic
 
 import (
 	"context"
+	"errors"
 
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/internal/svc"
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/user/github.com/rechardlc/go-im-chat/apps/user/rpc/user"
 
 	"github.com/zeromicro/go-zero/core/logx"
+)
+
+var (
+	ErrIdRequired    = errors.New("id is required")
+	ErrTokenInvalid  = errors.New("token is invalid")
 )
 
 type GetUserInfoLogic struct {
@@ -24,7 +30,26 @@ func NewGetUserInfoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetUs
 }
 
 func (l *GetUserInfoLogic) GetUserInfo(in *user.GetUserInfoReq) (*user.GetUserInfoResp, error) {
-	// todo: add your logic here and delete this line
-
-	return &user.GetUserInfoResp{}, nil
+	id := in.Id
+	// 校验ID
+	if id == "" {
+		return nil, ErrIdRequired
+	}
+	// 校验Token是否有效
+	// token := l.ctx.Value(ctxdata.CtxKeyJwtToken).(string)
+	// if token == "" {
+	// 	return nil, ErrTokenInvalid
+	// }
+	u, err := l.svcCtx.UsersModel.FindOne(l.ctx, id)
+	if err != nil {
+		return nil, ErrUserNotFound
+	}
+	return &user.GetUserInfoResp{
+		User: &user.UserEntity{
+			Id:       u.Id,
+			Nickname: u.Nickname,
+			Avatar:   u.Avatar,
+			Sex:      user.Sex(u.Sex),
+		},
+	}, nil
 }
