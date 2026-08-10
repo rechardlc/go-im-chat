@@ -13,12 +13,13 @@ import (
 	"github.com/rechardlc/go-im-chat/pkg/encrypt"
 	"github.com/rechardlc/go-im-chat/pkg/utils"
 	"github.com/rechardlc/go-im-chat/pkg/wuid"
+	"github.com/rechardlc/go-im-chat/pkg/xeer"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
 var (
-	ErrUserAlreadyExists = errors.New("user already exists")
-	ErrUserNotFound      = errors.New("user not found")
+	ErrUserAlreadyExists = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "用户已存在")
+	ErrPhoneRequired = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "电话号码不能为空")
 )
 
 type RegisterLogic struct {
@@ -39,10 +40,10 @@ func (l *RegisterLogic) Register(in *user.RegisterReq) (*user.RegisterResp, erro
 	// 1. 需要手机号合法性验证
 	phone := strings.TrimSpace(in.Phone)
 	if len(phone) == 0 {
-		return nil, errors.New("phone is required")
+		return nil, ErrPhoneRequired
 	}
 	if err := utils.ValidatePhone(phone); err != nil {
-		return nil, err
+		return nil, ErrInvalidPhone
 	}
 	// 2. 检查手机号是否已经注册
 	userInfo, err := l.svcCtx.UsersModel.FindOneByPhone(l.ctx, phone)

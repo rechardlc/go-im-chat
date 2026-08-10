@@ -2,21 +2,21 @@ package logic
 
 import (
 	"context"
-	"errors"
 
 	"github.com/rechardlc/go-im-chat/apps/user/models"
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/internal/convert"
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/internal/svc"
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/user/github.com/rechardlc/go-im-chat/apps/user/rpc/user"
 
+	"github.com/rechardlc/go-im-chat/pkg/xeer"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
 var (
-	ErrUserRequired = errors.New("user is required")
-	ErrNicknameRequired = errors.New("nickname is required")
-	ErrAvatarRequired = errors.New("avatar is required")
-	ErrSexRequired = errors.New("sex is required")	
+	ErrUserRequired = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "用户不能为空")
+	ErrNicknameRequired = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "昵称不能为空")
+	ErrAvatarRequired = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "头像不能为空")
+	ErrSexRequired = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "性别不能为空")	
 )
 
 type UpdateUserInfoLogic struct {

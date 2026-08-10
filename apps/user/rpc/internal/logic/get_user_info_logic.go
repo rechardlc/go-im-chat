@@ -2,17 +2,17 @@ package logic
 
 import (
 	"context"
-	"errors"
 
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/internal/svc"
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/user/github.com/rechardlc/go-im-chat/apps/user/rpc/user"
 
 	"github.com/zeromicro/go-zero/core/logx"
+	"github.com/rechardlc/go-im-chat/pkg/xeer"
 )
 
 var (
-	ErrIdRequired    = errors.New("id is required")
-	ErrTokenInvalid  = errors.New("token is invalid")
+	ErrIdRequired    = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "id is required")
+	ErrTokenInvalid  = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "token is invalid")
 )
 
 type GetUserInfoLogic struct {

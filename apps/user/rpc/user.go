@@ -9,6 +9,7 @@ import (
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/internal/svc"
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/user/github.com/rechardlc/go-im-chat/apps/user/rpc/user"
 	"github.com/rechardlc/go-im-chat/pkg/wuid"
+	"github.com/rechardlc/go-im-chat/pkg/interceptor/rpcserver"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/service"
@@ -45,6 +46,8 @@ func main() {
 			reflection.Register(grpcServer)
 		}
 	})
+	// 添加日志拦截器
+	s.AddUnaryInterceptors(interceptor.LogInterceptor)
 	defer s.Stop()
 
 	fmt.Printf("Starting rpc server at %s...\n", c.ListenOn)
