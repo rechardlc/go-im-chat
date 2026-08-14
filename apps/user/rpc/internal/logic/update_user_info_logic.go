@@ -8,15 +8,16 @@ import (
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/internal/svc"
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/user/github.com/rechardlc/go-im-chat/apps/user/rpc/user"
 
+	pkgErr "github.com/pkg/errors"
 	"github.com/rechardlc/go-im-chat/pkg/xeer"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
 var (
-	ErrUserRequired = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "用户不能为空")
+	ErrUserRequired     = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "用户不能为空")
 	ErrNicknameRequired = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "昵称不能为空")
-	ErrAvatarRequired = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "头像不能为空")
-	ErrSexRequired = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "性别不能为空")	
+	ErrAvatarRequired   = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "头像不能为空")
+	ErrSexRequired      = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "性别不能为空")
 )
 
 type UpdateUserInfoLogic struct {
@@ -38,18 +39,18 @@ func (l *UpdateUserInfoLogic) UpdateUserInfo(in *user.UpdateUserInfoReq) (*user.
 	nickname := in.Nickname
 	avatar := in.Avatar
 	sex := in.Sex
-	
+
 	if id == "" {
-		return nil, ErrUserRequired
+		return nil, pkgErr.WithStack(ErrUserRequired)
 	}
 	if nickname == "" {
-		return nil, ErrUserRequired
+		return nil, pkgErr.WithStack(ErrNicknameRequired)
 	}
 	if avatar == "" {
-		return nil, ErrUserRequired
+		return nil, pkgErr.WithStack(ErrAvatarRequired)
 	}
 	if sex == 0 {
-		return nil, ErrUserRequired
+		return nil, pkgErr.WithStack(ErrSexRequired)
 	}
 
 	u := &models.Users{
@@ -61,7 +62,7 @@ func (l *UpdateUserInfoLogic) UpdateUserInfo(in *user.UpdateUserInfoReq) (*user.
 	// 更新用户信息
 	err := l.svcCtx.UsersModel.Update(l.ctx, u)
 	if err != nil {
-		return nil, err
+		return nil, pkgErr.Wrapf(xeer.NewDBError(), "update user failed: %v, req: %v", err, id)
 	}
 	return &user.UpdateUserInfoResp{
 		User: &user.UserEntity{

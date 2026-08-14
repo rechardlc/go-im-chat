@@ -2,17 +2,20 @@ package logic
 
 import (
 	"context"
+	"errors"
 
+	"github.com/rechardlc/go-im-chat/apps/user/models"
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/internal/svc"
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/user/github.com/rechardlc/go-im-chat/apps/user/rpc/user"
 
-	"github.com/zeromicro/go-zero/core/logx"
+	pkgErr "github.com/pkg/errors"
 	"github.com/rechardlc/go-im-chat/pkg/xeer"
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 var (
-	ErrIdRequired    = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "id is required")
-	ErrTokenInvalid  = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "token is invalid")
+	ErrIdRequired   = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "id is required")
+	ErrTokenInvalid = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "token is invalid")
 )
 
 type GetUserInfoLogic struct {
@@ -33,7 +36,7 @@ func (l *GetUserInfoLogic) GetUserInfo(in *user.GetUserInfoReq) (*user.GetUserIn
 	id := in.Id
 	// 校验ID
 	if id == "" {
-		return nil, ErrIdRequired
+		return nil, pkgErr.WithStack(ErrIdRequired)
 	}
 	// 校验Token是否有效
 	// token := l.ctx.Value(ctxdata.CtxKeyJwtToken).(string)
@@ -42,7 +45,10 @@ func (l *GetUserInfoLogic) GetUserInfo(in *user.GetUserInfoReq) (*user.GetUserIn
 	// }
 	u, err := l.svcCtx.UsersModel.FindOne(l.ctx, id)
 	if err != nil {
-		return nil, ErrUserNotFound
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, pkgErr.WithStack(ErrUserNotFound)
+		}
+		return nil, pkgErr.Wrapf(xeer.NewDBError(), "find user by id failed: %v, req: %v", err, id)
 	}
 	return &user.GetUserInfoResp{
 		User: &user.UserEntity{

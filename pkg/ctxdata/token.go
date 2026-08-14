@@ -1,6 +1,7 @@
 package ctxdata
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -35,7 +36,7 @@ func NewTokenManager(cfg JWTConfig) (*TokenManager, error) {
 	}, nil
 }
 
-// MustNewTokenManager 创建 TokenManager，配置非法时 panic。
+// MustNewTokenManager 创建签发侧 TokenManager，配置非法时 panic。
 func MustNewTokenManager(cfg JWTConfig) *TokenManager {
 	m, err := NewTokenManager(cfg)
 	if err != nil {
@@ -51,6 +52,10 @@ func (m *TokenManager) AccessTokenExpire() time.Duration {
 
 // GenerateToken 生成 JWT access token。
 func (m *TokenManager) GenerateToken(userID, phone string) (string, error) {
+	if m.accessTokenExpire <= 0 {
+		return "", fmt.Errorf("jwt access token expire must be positive, got %v", m.accessTokenExpire)
+	}
+
 	now := time.Now()
 	claims := CustomClaims{
 		UserID: userID,

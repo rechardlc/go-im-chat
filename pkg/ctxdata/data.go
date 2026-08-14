@@ -27,3 +27,12 @@ func (m *TokenManager) ParseToken(tokenString string) (*CustomClaims, error) {
 
 	return nil, errors.New("token 解析失败")
 }
+
+// GetUserID 获取用户ID
+func (m *TokenManager) GetUserID(tokenString string) (string, error) {
+	claims, err := m.ParseToken(tokenString)
+	if err != nil {
+		return "", err
+	}
+	return claims.UserID, nil
+}

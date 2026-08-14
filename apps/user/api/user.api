@@ -1,0 +1,44 @@
+syntax = "v1"
+
+info (
+	title:  "用户服务的实列对象"
+	author: "richard"
+)
+
+import (
+	"domain.api"
+)
+
+@server (
+	prefix: v1/user
+	group:  user
+)
+service user {
+	@doc "用户注册"
+	@handler register
+	post /register (RegisterReq) returns (RegisterResp)
+
+	@doc "用户登录"
+	@handler login
+	post /login (LoginReq) returns (LoginResp)
+}
+
+@server (
+	prefix: v1/user
+	group:  user
+	jwt:    JwtAuth
+)
+service user {
+	@doc "获取用户信息"
+	@handler getUserInfo
+	get /info returns (GetUserInfoResp)
+
+	@doc "查找用户"
+	@handler findUser
+	get /find (FindUserReq) returns (FindUserResp)
+
+	@doc "更新用户信息"
+	@handler updateUserInfo
+	put /info (UpdateUserInfoReq) returns (UpdateUserInfoResp)
+}
+

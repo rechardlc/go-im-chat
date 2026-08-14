@@ -4,3 +4,7 @@ goctl rpc protoc ./apps/user/rpc/user.proto --go_out=./apps/user/rpc/user --go-g
 # go-zero 官方推荐使用 postgresql 生成 model 代码的方式
 # postgresql 生成 model 代码（本地 docker；users 表在 chat schema，非 public）
 goctl model pg datasource -url='postgres://chat:123456@127.0.0.1:5432/chat?sslmode=disable' -schema='chat' -table='users' -style=go_zero -dir='./apps/user/models/' -c
+
+# 生成 api 代码
+goctl api go -api ./apps/user/api/user.api -dir ./apps/user/api -style go_zero
+    

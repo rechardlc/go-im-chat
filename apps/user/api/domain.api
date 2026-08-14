@@ -1,0 +1,57 @@
+syntax = "v1"
+
+// Sex / UserStatus 与 rpc proto 枚举数值对齐，HTTP 层用 int32 传递
+// Sex: 0 UNSPECIFIED | 1 UNKNOWN | 2 MALE | 3 FEMALE
+// UserStatus: 0 UNSPECIFIED | 1 ACTIVE | 2 DISABLED
+type (
+	UserEntity {
+		Id       string `json:"id"`
+		Avatar   string `json:"avatar"`
+		Nickname string `json:"nickname"`
+		Phone    string `json:"phone"`
+		Status   int32  `json:"status"`
+		Sex      int32  `json:"sex"`
+	}
+	LoginReq {
+		Phone    string `json:"phone"`
+		Password string `json:"password"`
+	}
+	LoginResp {
+		Token  string     `json:"token"`
+		Expire int64      `json:"expire"` // token 有效期（秒）
+		User   UserEntity `json:"user"`
+	}
+	RegisterReq {
+		Phone    string `json:"phone"`
+		Password string `json:"password"`
+		Nickname string `json:"nickname"`
+		Avatar   string `json:"avatar,optional"`
+		Sex      int32  `json:"sex,optional"`
+	}
+	RegisterResp {
+		Token  string     `json:"token"`
+		Expire int64      `json:"expire"` // token 有效期（秒）
+		User   UserEntity `json:"user"`
+	}
+	GetUserInfoResp {
+		User UserEntity `json:"user"`
+	}
+	FindUserReq {
+		Name  string   `form:"name,optional"`
+		Phone string   `form:"phone,optional"`
+		Ids   []string `form:"ids,optional"`
+	}
+	FindUserResp {
+		Users []UserEntity `json:"users"`
+	}
+	UpdateUserInfoReq {
+		Id       string `json:"id"`
+		Nickname string `json:"nickname,optional"`
+		Avatar   string `json:"avatar,optional"`
+		Sex      int32  `json:"sex,optional"`
+	}
+	UpdateUserInfoResp {
+		User UserEntity `json:"user"`
+	}
+)
+

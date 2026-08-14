@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +13,9 @@ import (
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/user/github.com/rechardlc/go-im-chat/apps/user/rpc/user"
 	"github.com/rechardlc/go-im-chat/pkg/ctxdata"
 	"github.com/rechardlc/go-im-chat/pkg/encrypt"
+	"github.com/rechardlc/go-im-chat/pkg/xeer"
+	pkgErr "github.com/pkg/errors"
+	zeroxErrors "github.com/zeromicro/x/errors"
 )
 
 /**
@@ -102,7 +106,7 @@ func TestLoginLogic_Login(t *testing.T) {
 			findOne: func(context.Context, string) (*models.Users, error) {
 				return nil, errors.New("database unavailable")
 			},
-			wantErrMsg: "database unavailable",
+			wantErrMsg: "find user by phone failed: database unavailable",
 		},
 		{
 			name: "wrong password",
@@ -163,8 +167,12 @@ func TestLoginLogic_Login(t *testing.T) {
 			}
 
 			if tt.wantErrMsg != "" {
-				if err == nil || err.Error() != tt.wantErrMsg {
-					t.Fatalf("Login() error = %v, want message %q", err, tt.wantErrMsg)
+				if err == nil || !strings.Contains(err.Error(), tt.wantErrMsg) {
+					t.Fatalf("Login() error = %v, want message containing %q", err, tt.wantErrMsg)
+				}
+				causeErr := pkgErr.Cause(err)
+				if e, ok := causeErr.(*zeroxErrors.CodeMsg); !ok || e.Code != xeer.DB_ERROR {
+					t.Fatalf("Login() cause = %v, want DB_ERROR", causeErr)
 				}
 				return
 			}

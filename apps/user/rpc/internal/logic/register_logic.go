@@ -14,12 +14,13 @@ import (
 	"github.com/rechardlc/go-im-chat/pkg/utils"
 	"github.com/rechardlc/go-im-chat/pkg/wuid"
 	"github.com/rechardlc/go-im-chat/pkg/xeer"
+	pkgErr "github.com/pkg/errors"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
 var (
 	ErrUserAlreadyExists = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "用户已存在")
-	ErrPhoneRequired = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "电话号码不能为空")
+	ErrPhoneRequired     = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "电话号码不能为空")
 )
 
 type RegisterLogic struct {
@@ -40,24 +41,23 @@ func (l *RegisterLogic) Register(in *user.RegisterReq) (*user.RegisterResp, erro
 	// 1. 需要手机号合法性验证
 	phone := strings.TrimSpace(in.Phone)
 	if len(phone) == 0 {
-		return nil, ErrPhoneRequired
+		return nil, pkgErr.WithStack(ErrPhoneRequired)
 	}
 	if err := utils.ValidatePhone(phone); err != nil {
-		return nil, ErrInvalidPhone
+		return nil, pkgErr.WithStack(ErrInvalidPhone)
 	}
 	// 2. 检查手机号是否已经注册
 	userInfo, err := l.svcCtx.UsersModel.FindOneByPhone(l.ctx, phone)
 	if err != nil && !errors.Is(err, models.ErrNotFound) {
-		l.Errorf("find user by phone failed: %v", err)
-		return nil, err
+		return nil, pkgErr.Wrapf(xeer.NewDBError(), "find user by phone failed: %v, req: %v", err, phone)
 	}
 	if userInfo != nil {
-		return nil, ErrUserAlreadyExists
+		return nil, pkgErr.WithStack(ErrUserAlreadyExists)
 	}
 	// 3. 创建用户
 	userId, err := wuid.SafeNext()
 	if err != nil {
-		return nil, err
+		return nil, pkgErr.Wrapf(xeer.NewServerCommonError(), "generate user id failed: %v, req: %v", err, phone)
 	}
 	userInfo = &models.Users{
 		Id:       userId,
@@ -72,19 +72,19 @@ func (l *RegisterLogic) Register(in *user.RegisterReq) (*user.RegisterResp, erro
 	if len(in.Password) > 0 {
 		genPwd, err := encrypt.HashPassword(in.Password)
 		if err != nil {
-			return nil, err
+			return nil, pkgErr.Wrapf(xeer.NewRequestParamError(), "hash password failed: %v, req: %v", err, phone)
 		}
 		userInfo.Password = genPwd
 	}
 	// 5. 插入用户
 	_, err = l.svcCtx.UsersModel.Insert(l.ctx, userInfo)
 	if err != nil {
-		return nil, err
+		return nil, pkgErr.Wrapf(xeer.NewDBError(), "insert user failed: %v, req: %v", err, phone)
 	}
 	// 6. 生成token
 	token, err := l.svcCtx.Token.GenerateToken(userId, phone)
 	if err != nil {
-		return nil, err
+		return nil, pkgErr.Wrapf(xeer.NewRequestParamError(), "generate token failed: %v, req: %v", err, phone)
 	}
 	return &user.RegisterResp{
 		Token: token,
