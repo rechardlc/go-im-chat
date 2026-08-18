@@ -2,6 +2,7 @@ package ctxdata
 
 import (
 	"errors"
+	"context"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -35,4 +36,11 @@ func (m *TokenManager) GetUserID(tokenString string) (string, error) {
 		return "", err
 	}
 	return claims.UserID, nil
+}
+// 获取JWT token
+func GetJwtUserID(ctx context.Context) (string, error) {
+	userID, ok := ctx.Value("user_id").(string); if !ok {
+		return "", errors.New("user_id 不存在")
+	}
+	return userID, nil
 }

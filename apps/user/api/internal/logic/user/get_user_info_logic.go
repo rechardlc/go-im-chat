@@ -5,11 +5,10 @@ package user
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
 	"github.com/rechardlc/go-im-chat/apps/user/api/internal/svc"
 	"github.com/rechardlc/go-im-chat/apps/user/api/internal/types"
+	"github.com/rechardlc/go-im-chat/pkg/ctxdata"
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/user_client"
 
 	"github.com/zeromicro/go-zero/core/logx"
@@ -31,19 +30,16 @@ func NewGetUserInfoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetUs
 }
 
 func (l *GetUserInfoLogic) GetUserInfo() (resp *types.GetUserInfoResp, err error) {
-	userID, ok := l.ctx.Value("user_id").(string)
-	fmt.Println("userID", userID)
-	fmt.Println("ok", ok)
-	if !ok || userID == "" {
-		return nil, errors.New("unauthorized")
+	userID, err := ctxdata.GetJwtUserID(l.ctx)
+	if err != nil {
+		return nil, err
 	}
 	userResp, err := l.svcCtx.UserRpc.GetUserInfo(l.ctx, &user_client.GetUserInfoReq{
 		Id: userID,
 	})
 	if err != nil {
-		return resp, err
+		return nil, err
 	}
-	fmt.Println("userResp", userResp)
 	return &types.GetUserInfoResp{
 		User: types.UserEntity{
 			Id: userResp.User.Id,

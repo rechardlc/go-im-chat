@@ -43,7 +43,6 @@ type RegisterResp struct {
 }
 
 type UpdateUserInfoReq struct {
-	Id       string `json:"id"`
 	Nickname string `json:"nickname,optional"`
 	Avatar   string `json:"avatar,optional"`
 	Sex      int32  `json:"sex,optional"`

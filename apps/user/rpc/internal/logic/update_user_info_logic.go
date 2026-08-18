@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	"errors"
 
 	"github.com/rechardlc/go-im-chat/apps/user/models"
 	"github.com/rechardlc/go-im-chat/apps/user/rpc/internal/convert"
@@ -53,22 +54,28 @@ func (l *UpdateUserInfoLogic) UpdateUserInfo(in *user.UpdateUserInfoReq) (*user.
 		return nil, pkgErr.WithStack(ErrSexRequired)
 	}
 
-	u := &models.Users{
-		Id:       id,
-		Nickname: nickname,
-		Avatar:   avatar,
-		Sex:      convert.ProtoSexToDB(sex),
+	u, err := l.svcCtx.UsersModel.FindOne(l.ctx, id)
+	if err != nil {
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, pkgErr.WithStack(ErrUserNotFound)
+		}
+		return nil, pkgErr.Wrapf(xeer.NewDBError(), "find user by id failed: %v, req: %v", err, id)
 	}
-	// 更新用户信息
-	err := l.svcCtx.UsersModel.Update(l.ctx, u)
+
+	u.Nickname = nickname
+	u.Avatar = avatar
+	u.Sex = convert.ProtoSexToDB(sex)
+
+	err = l.svcCtx.UsersModel.Update(l.ctx, u)
 	if err != nil {
 		return nil, pkgErr.Wrapf(xeer.NewDBError(), "update user failed: %v, req: %v", err, id)
 	}
 	return &user.UpdateUserInfoResp{
 		User: &user.UserEntity{
-			Id:       id,
-			Nickname: nickname,
-			Avatar:   avatar,
+			Id:       u.Id,
+			Nickname: u.Nickname,
+			Avatar:   u.Avatar,
+			Phone:    u.Phone,
 			Sex:      convert.DBSexToProto(u.Sex),
 			Status:   convert.DBStatusToProto(u.Status),
 		},
