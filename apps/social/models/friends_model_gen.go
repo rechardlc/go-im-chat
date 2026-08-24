@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/builder"
 	"github.com/zeromicro/go-zero/core/stores/cache"
@@ -45,7 +46,7 @@ type (
 		FriendUid string        `db:"friend_uid"` // 好友用户ID
 		Remark    string        `db:"remark"`     // 备注
 		AddSource sql.NullInt64 `db:"add_source"` // 添加来源
-		CreatedAt sql.NullTime  `db:"created_at"` // 创建时间
+		CreatedAt time.Time     `db:"created_at"` // 创建时间
 	}
 )
 

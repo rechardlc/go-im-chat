@@ -5,8 +5,10 @@ CREATE TABLE IF NOT EXISTS friends (
     friend_uid varchar(64) NOT NULL,
     remark varchar(255) DEFAULT NULL,
     add_source smallint DEFAULT NULL,
-    created_at timestamptz DEFAULT NULL
+    created_at timestamptz DEFAULT now()
 );
+-- 已有库：CREATE TABLE IF NOT EXISTS 不会改列默认值
+ALTER TABLE friends ALTER COLUMN created_at SET DEFAULT now();
 
 COMMENT ON TABLE friends IS '好友关系';
 COMMENT ON COLUMN friends.id IS '主键';

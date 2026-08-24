@@ -2,20 +2,24 @@ package logic
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"time"
+
+	pkgErr "github.com/pkg/errors"
+	"github.com/zeromicro/go-zero/core/logx"
 
 	"github.com/rechardlc/go-im-chat/apps/social/models"
 	"github.com/rechardlc/go-im-chat/apps/social/rpc/internal/svc"
 	"github.com/rechardlc/go-im-chat/apps/social/rpc/social/github.com/rechardlc/go-im-chat/apps/social/rpc/social"
-	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/rechardlc/go-im-chat/pkg/constants"
-	"database/sql"
+	"github.com/rechardlc/go-im-chat/pkg/xeer"
 )
 
-var ErrFriendAlreadyExists = errors.New("已经存在好友关系")
-var ErrFriendRequestAlreadyExists = errors.New("已经存在好友申请")
-var ErrUserNotFound = errors.New("用户不存在")
+var (
+	ErrFriendAlreadyExists        = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "已经存在好友关系")
+	ErrFriendRequestAlreadyExists = xeer.NewError(xeer.REQUEST_PARAM_ERROR, "已经存在好友申请")
+)
 
 type FriendPutInLogic struct {
 	ctx    context.Context
@@ -32,36 +36,29 @@ func NewFriendPutInLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Frien
 }
 
 func (l *FriendPutInLogic) FriendPutIn(in *social.FriendPutInReq) (*social.FriendPutInResp, error) {
-	// todo: add your logic here and delete this line
-	// 判断用户是否存在
-	// user, err := l.svcCtx.UsersModel.FindOne(l.ctx, in.UserId)
-	// if err != nil && !errors.Is(err, models.ErrNotFound) {
-	// 	return nil, err
-	// }
-	// if user == nil {
-	// 	return nil, ErrUserNotFound
-	// }
 	// 1. 查询是否已经存在好友关系
 	friend, err := l.svcCtx.FriendsModel.FindOneByUserIdAndFriendUid(l.ctx, in.UserId, in.ReqUid)
 	if err != nil && !errors.Is(err, models.ErrNotFound) {
-		return nil, err
+		return nil, pkgErr.Wrapf(xeer.NewDBError(), "find friend failed: %v, req: userId=%v friendUid=%v", err, in.UserId, in.ReqUid)
 	}
 	if friend != nil {
-		return nil, ErrFriendAlreadyExists
+		return nil, pkgErr.WithStack(ErrFriendAlreadyExists)
 	}
+
 	// 2. 查询是否已经存在好友申请
 	friendRequest, err := l.svcCtx.FriendRequestsModel.FindOneByUserIdAndReqUid(l.ctx, in.UserId, in.ReqUid)
 	if err != nil && !errors.Is(err, models.ErrNotFound) {
-		return nil, err
+		return nil, pkgErr.Wrapf(xeer.NewDBError(), "find friend request failed: %v, req: userId=%v reqUid=%v", err, in.UserId, in.ReqUid)
 	}
 	if friendRequest != nil {
-		return nil, ErrFriendRequestAlreadyExists
+		return nil, pkgErr.WithStack(ErrFriendRequestAlreadyExists)
 	}
+
 	// 3. 创建申请记录
 	_, err = l.svcCtx.FriendRequestsModel.Insert(l.ctx, &models.FriendRequests{
-		UserId: in.UserId,
-		ReqUid: in.ReqUid,
-		ReqMsg: in.ReqMsg,
+		UserId:  in.UserId,
+		ReqUid:  in.ReqUid,
+		ReqMsg:  in.ReqMsg,
 		ReqTime: time.Now(),
 		HandleResult: sql.NullInt64{
 			Int64: int64(constants.NoHandlerResult),
@@ -69,7 +66,7 @@ func (l *FriendPutInLogic) FriendPutIn(in *social.FriendPutInReq) (*social.Frien
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, pkgErr.Wrapf(xeer.NewDBError(), "insert friend request failed: %v, req: userId=%v reqUid=%v", err, in.UserId, in.ReqUid)
 	}
 
 	return &social.FriendPutInResp{}, nil
