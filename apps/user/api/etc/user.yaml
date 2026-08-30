@@ -1,10 +1,13 @@
 Name: user
 Host: 0.0.0.0
 Port: 8888
+Mode: pro
 
 UserRpc:
-  Endpoints:
-    - ${HOST}:8080
+  Etcd:
+    Hosts:
+      - ${ETCD_HOSTS}
+    Key: user.rpc
   NonBlock: true
 
 JwtAuth:

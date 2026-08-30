@@ -1,5 +1,5 @@
 Name: user.rpc
-ListenOn: 0.0.0.0:10001
+ListenOn: 127.0.0.1:10001
 Mode: dev
 Timeout: 0
 

@@ -7,6 +7,8 @@ import (
 	"github.com/rechardlc/go-im-chat/apps/social/rpc/social/github.com/rechardlc/go-im-chat/apps/social/rpc/social"
 
 	"github.com/zeromicro/go-zero/core/logx"
+	pkgErr "github.com/pkg/errors"
+	"github.com/rechardlc/go-im-chat/pkg/xeer"
 )
 
 type FriendListLogic struct {
@@ -25,6 +27,19 @@ func NewFriendListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Friend
 
 func (l *FriendListLogic) FriendList(in *social.FriendListReq) (*social.FriendListResp, error) {
 	// todo: add your logic here and delete this line
-
-	return &social.FriendListResp{}, nil
+	friends, err := l.svcCtx.FriendsModel.ListByUserId(l.ctx, in.UserId)
+	if err != nil {
+		return nil, pkgErr.Wrapf(xeer.NewError(xeer.DB_ERROR, "获取好友列表失败"), "获取好友列表失败: %s，异常：%s", in.UserId, err.Error())
+	}
+	list := make([]*social.Friends, len(friends))
+	for i, friend := range friends {
+		list[i] = &social.Friends{
+			Id: int32(friend.Id),
+			UserId: friend.UserId,
+			Remark: friend.Remark,
+			AddSource: int32(friend.AddSource.Int64),
+			FriendUid: friend.FriendUid,
+		}
+	}
+	return &social.FriendListResp{List: list}, nil
 }

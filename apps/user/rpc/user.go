@@ -20,7 +20,7 @@ import (
 
 // flag包的作用：定义参数 -> 解析参数 -> 使用参数
 // -f 参数名，etc/dev/user.yaml 参数值，the config file 参数描述
-var configFile = flag.String("f", "etc/dev/user.yaml", "the config file")
+var configFile = flag.String("f", "etc/dev/user.yaml", "the config file of user rpc service")
 
 func main() {
 	// 解析参数

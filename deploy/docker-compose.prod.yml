@@ -1,0 +1,246 @@
+# 线上同构：Nginx 唯一入口 + etcd 发现 + 业务容器 + 自建 Postgres/Redis
+# 数据目录与日常开发共用仓库根 ./data（同一时刻只能起一套里的 Postgres/Redis）
+#
+# 从仓库根目录启动：
+#   cp deploy/.env.prod.example deploy/.env.prod
+#   make prod
+#
+# 真服务器把 ./data 换成数据盘路径即可，例如 /data/postgres。
+
+name: go-im-chat-prod
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-app-env: &app-env
+  POSTGRES_HOST: postgres-db
+  REDIS_HOST: redis-cache
+  ETCD_HOSTS: etcd:2379
+
+networks:
+  frontend-net:
+    driver: bridge
+  backend-net:
+    driver: bridge
+
+services:
+  postgres-db:
+    container_name: postgres-db
+    image: postgres:13
+    restart: unless-stopped
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-chat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      POSTGRES_DB: ${POSTGRES_DB:-chat}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chat} -d ${POSTGRES_DB:-chat}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend-net
+    logging: *default-logging
+
+  redis-cache:
+    container_name: redis-cache
+    image: redis:alpine3.23
+    restart: unless-stopped
+    volumes:
+      - ./data/redis:/data
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:-123456}
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-123456} ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend-net
+    logging: *default-logging
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.16
+    container_name: etcd
+    restart: unless-stopped
+    command:
+      - /usr/local/bin/etcd
+      - --name=etcd
+      - --data-dir=/etcd-data
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://etcd:2379
+      - --listen-peer-urls=http://0.0.0.0:2380
+      - --initial-advertise-peer-urls=http://etcd:2380
+      - --initial-cluster=etcd=http://etcd:2380
+      - --initial-cluster-state=new
+      - --auto-compaction-mode=periodic
+      - --auto-compaction-retention=1h
+    # 不落盘：RPC 每次启动会重新注册；避免 --initial-cluster-state=new 与旧数据冲突
+    healthcheck:
+      test: ["CMD", "etcdctl", "--endpoints=http://127.0.0.1:2379", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend-net
+    logging: *default-logging
+
+  user-rpc:
+    build:
+      context: .
+      dockerfile: deploy/dockerfile/Dockerfile.app
+      args:
+        APP: user
+        TYPE: rpc
+    image: easy-im-user-rpc:prod
+    container_name: user-rpc
+    restart: unless-stopped
+    env_file:
+      - deploy/.env.prod
+    environment:
+      <<: *app-env
+      POD_IP: user-rpc
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8080"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    networks:
+      - backend-net
+    logging: *default-logging
+
+  social-rpc:
+    build:
+      context: .
+      dockerfile: deploy/dockerfile/Dockerfile.app
+      args:
+        APP: social
+        TYPE: rpc
+    image: easy-im-social-rpc:prod
+    container_name: social-rpc
+    restart: unless-stopped
+    env_file:
+      - deploy/.env.prod
+    environment:
+      <<: *app-env
+      POD_IP: social-rpc
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8080"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    networks:
+      - backend-net
+    logging: *default-logging
+
+  user-api:
+    build:
+      context: .
+      dockerfile: deploy/dockerfile/Dockerfile.app
+      args:
+        APP: user
+        TYPE: api
+    image: easy-im-user-api:prod
+    container_name: user-api
+    restart: unless-stopped
+    env_file:
+      - deploy/.env.prod
+    environment:
+      <<: *app-env
+    depends_on:
+      user-rpc:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "code=$$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8888/); test $$code -ge 200"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    networks:
+      - frontend-net
+      - backend-net
+    logging: *default-logging
+
+  social-api:
+    build:
+      context: .
+      dockerfile: deploy/dockerfile/Dockerfile.app
+      args:
+        APP: social
+        TYPE: api
+    image: easy-im-social-api:prod
+    container_name: social-api
+    restart: unless-stopped
+    env_file:
+      - deploy/.env.prod
+    environment:
+      <<: *app-env
+    depends_on:
+      social-rpc:
+        condition: service_healthy
+      user-rpc:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "code=$$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8888/); test $$code -ge 200"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    networks:
+      - frontend-net
+      - backend-net
+    logging: *default-logging
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: im-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    volumes:
+      - ./deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      user-api:
+        condition: service_healthy
+      social-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - frontend-net
+    logging: *default-logging

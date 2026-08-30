@@ -19,6 +19,7 @@ type (
 		friendsModel
 		FindOneByUserIdAndFriendUid(ctx context.Context, userId, friendUid string) (*Friends, error)
 		InsertBatchsWithSession(ctx context.Context, session sqlx.Session, data []*Friends) error
+		ListByUserId(ctx context.Context, userId string) ([]*Friends, error)
 	}
 
 	customFriendsModel struct {
@@ -66,4 +67,18 @@ func (m *customFriendsModel) InsertBatchsWithSession(ctx context.Context, sessio
 	}
 	_, err := session.ExecCtx(ctx, sb.String(), values...)
 	return err
+}
+
+func (m *customFriendsModel) ListByUserId(ctx context.Context, userId string) ([]*Friends, error) {
+	query := fmt.Sprintf("select %s from %s where user_id = $1", friendsRows, m.table)
+	var resp []*Friends
+	err := m.QueryRowsNoCacheCtx(ctx, &resp, query, userId)
+	switch err {
+	case nil:
+		return resp, nil
+	case sqlc.ErrNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
 }

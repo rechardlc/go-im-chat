@@ -9,6 +9,7 @@ import (
 	"github.com/rechardlc/go-im-chat/apps/social/rpc/internal/svc"
 	"github.com/rechardlc/go-im-chat/apps/social/rpc/social/github.com/rechardlc/go-im-chat/apps/social/rpc/social"
 
+	"github.com/rechardlc/go-im-chat/pkg/interceptor/rpcserver"
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/service"
 	"github.com/zeromicro/go-zero/zrpc"
@@ -16,13 +17,13 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-var configFile = flag.String("f", "etc/dev/social.yaml", "the config file")
+var configFile = flag.String("f", "etc/dev/social.yaml", "the config file of social rpc service")
 
 func main() {
 	flag.Parse()
 
 	var c config.Config
-	conf.MustLoad(*configFile, &c)
+	conf.MustLoad(*configFile, &c, conf.UseEnv())
 	ctx := svc.NewServiceContext(c)
 
 	s := zrpc.MustNewServer(c.RpcServerConf, func(grpcServer *grpc.Server) {
@@ -32,7 +33,8 @@ func main() {
 			reflection.Register(grpcServer)
 		}
 	})
-	// s.AddUnaryInterceptors()
+	// 添加日志拦截器
+	s.AddUnaryInterceptors(interceptor.LogInterceptor)
 	defer s.Stop()
 
 	fmt.Printf("Starting rpc server at %s...\n", c.ListenOn)

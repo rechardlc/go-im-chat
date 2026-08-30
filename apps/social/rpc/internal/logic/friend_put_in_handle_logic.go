@@ -45,10 +45,10 @@ func (l *FriendPutInHandleLogic) FriendPutInHandle(in *social.FriendPutInHandleR
 	// 1. 获取好友申请记录
 	friendRequest, err := l.svcCtx.FriendRequestsModel.FindOne(l.ctx, int64(in.FriendReqId))
 	if err != nil {
-		return nil, pkgErr.Wrapf(xeer.NewError(xeer.DB_ERROR, "获取好友申请记录失败"), "获取好友申请记录失败: %s", in.FriendReqId)
+		return nil, pkgErr.Wrapf(xeer.NewError(xeer.DB_ERROR, "获取好友申请记录失败"), "获取好友申请记录失败: %s，异常：%s", in.FriendReqId, err.Error())
 	}
 	if friendRequest == nil {
-		return nil, pkgErr.Wrapf(xeer.NewError(xeer.REQUEST_PARAM_ERROR, "好友申请记录不存在"), "好友申请记录不存在: %s", in.FriendReqId)
+		return nil, pkgErr.Wrapf(xeer.NewError(xeer.REQUEST_PARAM_ERROR, "好友申请记录不存在"), "好友申请记录不存在: %s，异常：%s", in.FriendReqId, err.Error())
 	}
 	// 2. 判断好友申请记录是否已经处理
 	switch friendRequest.HandleResult.Int64 {
@@ -78,7 +78,7 @@ func (l *FriendPutInHandleLogic) FriendPutInHandle(in *social.FriendPutInHandleR
 	err = l.svcCtx.FriendRequestsModel.Trans(l.ctx, func(ctx context.Context, session sqlx.Session) error {
 		// 4.1 更新好友申请记录
 		if err := l.svcCtx.FriendRequestsModel.UpdateWithSession(ctx, session, friendRequest); err != nil {
-			return pkgErr.Wrapf(xeer.NewDBError(), "更新好友申请记录失败: %s，%w", in.FriendReqId, err)
+			return pkgErr.Wrapf(xeer.NewDBError(), "更新好友申请记录失败: %s，异常：%s", in.FriendReqId, err.Error())
 		}
 		// 4.2 创建好友关系 2条相互的记录
 		friends := []*models.Friends{
@@ -94,7 +94,7 @@ func (l *FriendPutInHandleLogic) FriendPutInHandle(in *social.FriendPutInHandleR
 		return l.svcCtx.FriendsModel.InsertBatchsWithSession(ctx, session, friends)
 	})
 	if err != nil {
-		return nil, pkgErr.Wrapf(xeer.NewDBError(), "处理好友申请失败: %s", in.FriendReqId)
+		return nil, pkgErr.Wrapf(xeer.NewDBError(), "处理好友申请失败: %s，异常：%s", in.FriendReqId, err.Error())
 	}
-	return &social.FriendPutInHandleResp{}, nil
+	return nil, nil
 }

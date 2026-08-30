@@ -1,6 +1,21 @@
 Name: social.rpc
 ListenOn: 0.0.0.0:8080
+Mode: pro
+
 Etcd:
   Hosts:
-  - 127.0.0.1:2379
+    - ${ETCD_HOSTS}
   Key: social.rpc
+
+Postgres:
+  DataSource: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}?sslmode=disable
+
+CacheRedis:
+  - Host: ${REDIS_HOST}:6379
+    Pass: "${REDIS_PASSWORD}"
+    Type: node
+
+JWT:
+  Secret: ${JWT_SECRET}
+  AccessTokenExpire: 1h
+  RefreshTokenExpire: 168h

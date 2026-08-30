@@ -1,0 +1,14 @@
+# 构建上下文在仓库根，必须排除数据盘，否则镜像会把 ./data 打进去
+data/
+.git/
+.idea/
+.vscode/
+tmp/
+logs/
+docs/
+deploy/mk/
+**/*_test.go
+*.md
+.env
+.env.*
+!.env.example

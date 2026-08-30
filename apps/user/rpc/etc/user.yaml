@@ -1,20 +1,21 @@
 Name: user.rpc
-ListenOn: ${HOST}:8080
+ListenOn: 0.0.0.0:8080
+Mode: pro
+
 Etcd:
   Hosts:
-  - ${ETCD_HOSTS}
+    - ${ETCD_HOSTS}
   Key: user.rpc
 
 Postgres:
-  DataSource: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${HOST}:5432/${POSTGRES_DB}?sslmode=disable
+  DataSource: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}?sslmode=disable
 
 CacheRedis:
-  - Host: ${HOST}:6379
-    Pass: ${REDIS_PASSWORD}
+  - Host: ${REDIS_HOST}:6379
+    Pass: "${REDIS_PASSWORD}"
     Type: node
 
 JWT:
   Secret: ${JWT_SECRET}
   AccessTokenExpire: 1h
   RefreshTokenExpire: 168h
-

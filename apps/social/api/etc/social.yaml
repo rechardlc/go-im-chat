@@ -1,0 +1,21 @@
+Name: social
+Host: 0.0.0.0
+Port: 8888
+Mode: pro
+
+SocialRpc:
+  Etcd:
+    Hosts:
+      - ${ETCD_HOSTS}
+    Key: social.rpc
+  NonBlock: true
+
+UserRpc:
+  Etcd:
+    Hosts:
+      - ${ETCD_HOSTS}
+    Key: user.rpc
+  NonBlock: true
+
+JwtAuth:
+  AccessSecret: ${JWT_SECRET}

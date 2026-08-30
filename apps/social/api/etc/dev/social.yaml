@@ -1,0 +1,17 @@
+Name: social
+Host: 0.0.0.0
+Port: 11002
+
+SocialRpc:
+  Endpoints:
+    - 127.0.0.1:10002
+  NonBlock: true
+
+UserRpc:
+  Endpoints:
+    - 127.0.0.1:10001
+  NonBlock: true
+
+
+JwtAuth:
+  AccessSecret: dev-secret-change-me
